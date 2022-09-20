@@ -40,16 +40,25 @@ class Graph():
         return self.adj_list[node]
 
     def add_node(self, name):
+        '''
+        This method adds a node to the graph.
+        '''
         if name not in self.adj_list:
             self.adj_list[name] = []
 
     def remove_node(self, name):
+        '''
+        This method removes a node, and any edges to or from the node
+        '''
         for node in self.adj_list.keys():
             if name in self.adj_list[node]:
                 self.adj_list[node].remove(name)
         del self.adj_list[name]
-        
+    
     def add_edge(self, node1, node2, weight=1, directed=True):
+        '''
+        This function adds an edge. If directed is false, it adds an edge in both directions
+        '''
         # in case they don't already exist, add these nodes to the graph
         self.add_node(node1)
         self.add_node(node2)
@@ -73,7 +82,7 @@ class Graph():
         if directed:
             dot = graphviz.Digraph(engine="neato", comment='Directed graph')
         else:
-            dot = graphviz.Graph(engine="neato", comment='Undirected graph', strict=True)        
+            dot = graphviz.Graph(engine="neato", comment='Undirected graph')        
         dot.attr(overlap="false", splines="true")
         for v in self.adj_list:
             if positions is not None:
@@ -85,8 +94,8 @@ class Graph():
                 dot.edge(str(v), str(w))
 
         return dot
-
-    def _dfs_recursive(self, v): # This is the main DFS recursive function
+    
+    def _dfs_r(self, v): # This is the main DFS recursive function
         """
         argument 
         `v`, next vertex to be visited
@@ -95,8 +104,8 @@ class Graph():
         print('Visiting: ', v)
         self.colour[v] = 'grey' # Visited vertices are coloured 'grey'
         for w in self.adj_list[v]: # Let's visit all outgoing edges from v
-            if self.colour[w] == 'white': # To avoid loops, we vist check if the next vertex hasn't been visited yet
-                self._dfs_recursive(w)
+            if self.colour[w] == 'white': # To avoid loops, we check if the next vertex hasn't been visited yet
+                self._dfs_r(w)
         self.colour[v] = 'black' # When we finish the for loop, we know we have visited all nodes from v. It is time to turn it 'black'
 
     def dfs(self, start): # This is an auxiliary DFS function to create and initialize the colour dictionary
@@ -105,9 +114,9 @@ class Graph():
         `start`, starting vertex
         """    
         self.colour = {node: 'white' for node in self.adj_list.keys()} # Create a dictionary with keys as node numbers and values equal to 'white'
-        self._dfs_recursive(start)
-        return self.colour # We can return colour dictionary. It is useful for some operations, such as detecting connected components 
-
+        self._dfs_r(start)
+        return self.colour # We can return colour dictionary. It is useful for some operations, such as detecting connected components
+    
     def dfs_all(self, start):
         """
         Traverse the graph in DFS order. This function keep calling dfs_r while there are white vetices
@@ -121,7 +130,7 @@ class Graph():
             if self.colour[start] == 'white':
                 self.dfs_recursive(start)        
 
-    def find_cycle_r(self, v):
+    def _find_cycle_r(self, v):
         """
         Detect a cycle in the graph. This is the main recursive function based on DFS
         arguments:
@@ -133,7 +142,7 @@ class Graph():
         self.colour[v] = 'grey'
         for w in self.adj_list[v]:
             if self.colour[w] == 'white':
-                if self.find_cycle_r(w):
+                if self._find_cycle_r(w):
                     return True
             else:
                 if self.colour[w] == 'grey':
@@ -153,12 +162,11 @@ class Graph():
         self.colour = dict([(node, 'white') for node in self.adj_list.keys()])
         for start in self.colour.keys():
             if self.colour[start] == 'white':
-                if self.find_cycle_r(start):
+                if self._find_cycle_r(start):
                     return True
-                else:
-                    return self.find_cycle_r(start)
+        return False
 
-    def topological_sort_r(self, v):
+    def _topological_sort_r(self, v):
         """
         Create a list with a topological ordering of the graph nodes. This is the main recursive function based on DFS
         arguments:
@@ -169,7 +177,7 @@ class Graph():
         self.colour[v] = 'grey'
         for w in self.adj_list[v]:
             if self.colour[w] == 'white':
-                self.topological_sort_r(w)
+                self._topological_sort_r(w)
         self.colour[v] = 'black'
         self.stack.append(v)
 
@@ -185,7 +193,7 @@ class Graph():
         self.colour = {node: 'white' for node in self.adj_list.keys()}
         for start in self.adj_list.keys():
             if self.colour[start] == 'white':
-                self.topological_sort_r(start)
+                self._topological_sort_r(start)
         return self.stack[::-1]
 
     def transpose(self):
@@ -207,30 +215,17 @@ class Graph():
         argument 
         `start`, start vertex
         """      
-        # Intialise set 'visited' with vertex s
         visited = {start}
-        # Initialise priority queue Q with an empty list
         Q = []
-        # Initilise list tree with empty Graph object. This object will have the MST at the end of the execution
         tree = Graph()
-        # Initilise the priority queue Q with outgoing edges from s
         for e in self.adj_list[start]:
-            # There is a trick here. Python prioriy queues accept tuples but the first entry of the tuple must be the priority value
             pq.heappush(Q, (self.edge_weights[(start,e)], start, e))
         while len(Q) > 0:
-            # Remove element from Q with the smallest weight
             weight, v, u = pq.heappop(Q)
-            # If the node is already in 'visited' we cannot include it in the MST since it would create a cycle
             if u not in visited:
-                # Let's grow the MST by inserting the vertex in visited
                 visited.add(u)
-                # Also we insert the edge in tree, use v, u, cost order
                 tree.add_edge(v, u, weight=weight)
-                # We iterate over all outgoing edges of u[1] (or "v" according to the algorithm)
                 for e in self.adj_list[u]:
-                    # We are interested in edges that connect to vertices not in 'visited' and with smaller weight than known values stored in a
                     if e not in visited:
-                        # Edge e is of interest, let's store in the priority queue for future analysis
                         pq.heappush(Q, (self.edge_weights[(u,e)], u, e))        
         return tree
-      
