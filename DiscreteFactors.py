@@ -61,6 +61,9 @@ class Factor:
         # confirm that any shared variables have the same outcomeSpace
         for var in set(other.domain).intersection(set(self.domain)):
             if self.outcomeSpace[var] != other.outcomeSpace[var]:
+                print(var)
+                print(self.outcomeSpace[var])
+                print(other.outcomeSpace[var])
                 raise IndexError('Incompatible outcomeSpaces. Make sure you set the same evidence on all factors')
 
         # extend current domain with any new variables required
@@ -118,8 +121,21 @@ class Factor:
                 f.table = f.table[slice_tuple]
                 
                 # modify the outcomeSpace to correspond to the changes just made to self.table
-                f.outcomeSpace[var] = (value,)
+            f.outcomeSpace[var] = (value,)
         return f
+
+    def evidence(self, **kwargs):
+        '''
+        Sets evidence by removing the observed variables from the factor domain
+        This function must be used to set evidence on all factors before joining,
+        because it removes the relevant variable from the factor. 
+        '''
+        f = self.copy()
+        evi = kwargs
+        indices = tuple(self.outcomeSpace[v].index(evi[v]) if v in evi else slice(None) for v in self.domain)
+        f.table = f.table[indices]
+        f.domain = tuple(v for v in f.domain if v not in evi)
+        return f        
     
     def marginalize(self, var):
         '''
